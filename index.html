@@ -1,55 +1,203 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-    <title>Mi App Gemini en iPhone</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delegado AI - Asistente MUN</title>
+    
     <style>
-        body { font-family: sans-serif; padding: 20px; }
-        textarea { width: 100%; height: 100px; margin-bottom: 10px; }
-        #output { border: 1px solid #ccc; padding: 10px; min-height: 50px; white-space: pre-wrap; }
+        :root {
+            /* Paleta de colores estilo Gemini */
+            --gemini-blue: #1A73E8; /* El azul de Google */
+            --background-light: #FFFFFF;
+            --card-background: #F1F3F4; /* Gris muy claro para las áreas de texto */
+            --text-color-dark: #202124;
+            --border-color: #DADCE0;
+            --border-radius: 20px; /* Bordes más redondeados */
+        }
+        body { 
+            font-family: 'Google Sans', Roboto, Arial, sans-serif;
+            padding: 20px;
+            background-color: var(--background-light);
+            color: var(--text-color-dark);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: var(--text-color-dark);
+            font-size: 24px;
+            font-weight: 500;
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: 500 !important;
+        }
+        textarea { 
+            width: calc(100% - 20px); 
+            height: 120px; 
+            margin-bottom: 20px; 
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            background-color: var(--card-background);
+            resize: none; 
+            font-size: 16px;
+            box-shadow: none;
+            transition: border-color 0.3s;
+        }
+        textarea:focus {
+            border-color: var(--gemini-blue);
+            outline: none;
+        }
+        button {
+            background-color: var(--gemini-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #1669D4;
+        }
+        #output { 
+            background-color: var(--card-background);
+            border: 1px solid var(--border-color); 
+            padding: 20px; 
+            min-height: 100px; 
+            white-space: pre-wrap; 
+            border-radius: var(--border-radius);
+            margin-top: 30px;
+            box-shadow: none;
+            font-size: 16px;
+            line-height: 1.6;
+        }
+        h3 {
+            margin-top: 25px;
+            color: var(--text-color-dark);
+            font-weight: 500;
+            font-size: 18px;
+        }
+        /* Estilo para el estado de carga (loading) */
+        .loading #output {
+            color: var(--gemini-blue);
+            font-style: italic;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <h1>Generador Simple con Gemini</h1>
-    <textarea id="userInput" placeholder="Escribe tu prompt aquí..."></textarea>
-    <button onclick="generateContent()">Generar</button>
-    <h3>Respuesta:</h3>
-    <div id="output">Esperando prompt...</div>
+
+    <h1>Delegado AI - Asistente MUN</h1>
+
+    <div style="margin-bottom: 20px;">
+        <label for="functionSelect" style="font-weight: bold; display: block; margin-bottom: 5px;">Selecciona la Función:</label>
+        <select id="functionSelect" style="width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border-color); background-color: white;">
+            <option value="research">1. Búsqueda de Investigación (Links Oficiales)</option>
+            <option value="interpellation">2. Interpelación (Crítica de Discurso)</option>
+            <option value="speech_correction">3. Corrección de Discurso (Estructura MUN)</option>
+            <option value="topic_breakdown">4. Desglose de Tópico (Preguntas de Investigación)</option>
+            <option value="doc_correction">5. Corrección de Documento de Posición</option>
+        </select>
+    </div>
+
+    <label for="userInput" style="font-weight: bold; display: block; margin-bottom: 5px;">Introduce el Texto o Tópico:</label>
+    <textarea id="userInput" placeholder="Ej: Las medidas de la delegación de Etiopía para el agua potable en zonas rurales..."></textarea>
+    <button onclick="processRequest()">Ejecutar Función AI</button>
+
+    <h3>Respuesta del Delegado AI:</h3>
+    <div id="output">Selecciona una función e introduce el texto para comenzar.</div>
 
     <script>
         // *** ADVERTENCIA: CLAVE API EXPUESTA. SOLO PARA PRUEBAS PERSONALES ***
-        const API_KEY = "AIzaSyArz0HOBHd8XB73KegLzG-NGxt5vbl-z0o"
+        // ¡REEMPLAZA ESTO CON TU CLAVE REAL!
+        const API_KEY = "AIzaSyArz0HOBHd8XB73KegLzG-NGxt5vbl-z0o"; 
 
-        async function generateContent() {
+        // Función principal que determina qué prompt y qué modelo usar
+        async function processRequest() {
+            const selectedFunction = document.getElementById('functionSelect').value;
             const userInput = document.getElementById('userInput').value;
             const outputDiv = document.getElementById('output');
-            
+            const bodyElement = document.body;
+
             if (!userInput) {
-                outputDiv.textContent = "Por favor, introduce un prompt.";
+                outputDiv.textContent = "Por favor, introduce el texto requerido para la función seleccionada.";
                 return;
             }
+            
+            // Mostrar estado de carga y aplicar clase CSS
+            outputDiv.textContent = "Analizando y generando la respuesta diplomática...";
+            bodyElement.classList.add('loading');
+            
+            // 1. Crear el prompt específico según la función
+            let systemInstruction = "";
+            let finalPrompt = userInput;
+            let useSearch = false;
 
-            outputDiv.textContent = "Generando...";
+            // Establecer el estilo de respuesta Diplomático MUN
+            const diplomaticStyle = "Tu respuesta debe ser formal, objetiva y utilizar lenguaje diplomático de Modelos de Naciones Unidas (MUN) en tercera persona (ej. 'La delegación de...'). Mantente en español.";
+
+            switch (selectedFunction) {
+                case 'research':
+                    systemInstruction = `${diplomaticStyle} Eres un asistente de investigación de delegados. Busca en la web 3 enlaces recientes y relevantes (primero el más reciente) que respondan a la pregunta del usuario. Los enlaces DEBEN ser de dominios .org, gubernamentales (.gov), o de la ONU. Después de CADA enlace, proporciona un párrafo muy breve (máx. 3 líneas) resumiendo cómo el enlace responde a la pregunta. Si el buscador no encuentra links de ese dominio, usa el link más relevante que encuentres.`;
+                    finalPrompt = `Busca información y links oficiales sobre: ${userInput}`;
+                    useSearch = true; // Activar búsqueda
+                    break;
+
+                case 'interpellation':
+                    systemInstruction = `${diplomaticStyle} Eres un delegado opositor muy crítico en un MUN. Cuestiona cada punto y cada afirmación del discurso proporcionado, actuando como la delegación de 'To' Revuelto'. Formula tus cuestionamientos usando la tercera persona (Ejemplo: 'La delegación de To' Revuelto se cuestiona la viabilidad de...', 'Se le pide a la delegación de [País mencionado] que clarifique...')`;
+                    finalPrompt = `Discurso a interpelar: ${userInput}`;
+                    break;
+
+                case 'speech_correction':
+                    systemInstruction = `${diplomaticStyle} Eres un editor de discursos diplomáticos experto en la estructura MUN. Analiza el siguiente discurso y corrígelo, asegurando que se adhiera perfectamente a la estructura de 3 partes: 1. Introducción (Nivel mundial - citando organismos globales), 2. Desarrollo (Nivel nacional - medidas tomadas por el país), 3. Conclusión (Propuestas a la comunidad internacional). Indica claramente qué sección debe ser mejorada o si cumple con los criterios.`;
+                    finalPrompt = `Discurso para corrección: ${userInput}`;
+                    break;
+                
+                case 'topic_breakdown':
+                    systemInstruction = `${diplomaticStyle} Eres un estratega de investigación para MUN. El tópico es: "${userInput}". Genera 10 preguntas de investigación esenciales que el delegado debe responder para redactar un discurso o documento de posición completo, abordando el contexto global, la situación nacional y las posibles soluciones. Organiza las preguntas por nivel: Global (4), Nacional (3), Soluciones/Propuestas (3).`;
+                    finalPrompt = `Generar preguntas de investigación para el tópico: ${userInput}`;
+                    break;
+
+                case 'doc_correction':
+                    systemInstruction = `${diplomaticStyle} Eres un experto en documentos de posición MUN. Analiza el siguiente texto. Verifica que cumple con la estructura de un discurso con bibliografía, y que su contenido se ajusta a un Documento de Posición (entre 500 y 800 palabras). Revisa los campos de: Tópico, Comisión, Delegación y Delegado. Proporciona correcciones y sugerencias SOLO sobre la estructura, claridad diplomática, y cumplimiento de formato/longitud.`;
+                    finalPrompt = `Documento de Posición para corrección: ${userInput}`;
+                    break;
+            }
 
             try {
+                // 2. Ejecutar la llamada a la API
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: userInput }] }]
+                        // Configuración del modelo: systemInstruction, prompt, y tools si es necesario
+                        config: {
+                             systemInstruction: systemInstruction,
+                             // Activar Google Search si la función lo requiere
+                             ...(useSearch && { tools: [{ googleSearch: {} }] })
+                        },
+                        contents: [{ parts: [{ text: finalPrompt }] }]
                     })
                 });
 
                 const data = await response.json();
                 
-                // Extraer el texto de la respuesta
-                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error al recibir el texto.";
+                // 3. Procesar y mostrar la respuesta
+                const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error: No se pudo generar una respuesta válida. Verifique la clave API o el límite de uso.";
                 outputDiv.textContent = generatedText;
 
             } catch (error) {
-                outputDiv.textContent = `Ocurrió un error: ${error.message}`;
+                outputDiv.textContent = `Ocurrió un error en la comunicación con la API: ${error.message}`;
                 console.error("Error:", error);
+            } finally {
+                // Quitar estado de carga
+                bodyElement.classList.remove('loading');
             }
         }
     </script>
